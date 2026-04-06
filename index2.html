@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ocular Triage — FM Clinical Decision Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2230;
+  --surface3: #222a38;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --emergency: #ff4d4f;
+  --emergency-dim: #2d1012;
+  --emergency-border: #5c1a1c;
+  --urgency: #ffa940;
+  --urgency-dim: #2d1f06;
+  --urgency-border: #5c3d0a;
+  --safe: #52c41a;
+  --safe-dim: #102010;
+  --safe-border: #1f4010;
+  --accent: #58a6ff;
+  --accent-dim: #0d1f3c;
+  --accent-border: #1f3a5c;
+  --purple: #a78bfa;
+  --purple-dim: #1a1330;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --radius: 7px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; min-height: 100vh; overflow-x: hidden; }
+
+/* ─── Header ─── */
+header {
+background: var(–surface);
+border-bottom: 1px solid var(–border);
+padding: 11px 18px;
+display: flex; align-items: center; justify-content: space-between;
+position: sticky; top: 0; z-index: 200;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.eye-icon { width: 34px; height: 34px; background: var(–accent-dim); border: 1px solid var(–accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+header h1 { font-family: var(–mono); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; }
+header p { font-size: 10px; color: var(–muted); font-family: var(–mono); }
+.badge { font-family: var(–mono); font-size: 10px; padding: 3px 8px; border-radius: 3px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: var(–accent-dim); color: var(–accent); border: 1px solid var(–accent-border); }
+
+/* ─── Tab bar ─── */
+.tabs { display: flex; gap: 3px; padding: 10px 14px 0; background: var(–surface); border-bottom: 1px solid var(–border); overflow-x: auto; }
+.tab { padding: 8px 13px 9px; border: none; border-radius: 6px 6px 0 0; background: transparent; color: var(–muted); font-family: var(–mono); font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.18s; letter-spacing: 0.04em; border-bottom: 2px solid transparent; }
+.tab:hover { color: var(–text); }
+.tab.active { color: var(–text); background: var(–surface2); border-bottom: 2px solid var(–accent); }
+.tab .tb { display: inline-block; margin-left: 5px; font-size: 9px; padding: 1px 5px; border-radius: 10px; font-weight: 700; }
+.tb.emg { background: var(–emergency-dim); color: var(–emergency); }
+.tb.urg { background: var(–urgency-dim); color: var(–urgency); }
+.tb.ref { background: var(–accent-dim); color: var(–accent); }
+.tb.med { background: var(–safe-dim); color: var(–safe); }
+.tb.sym { background: var(–purple-dim); color: var(–purple); }
+.tb.con { background: #1a1f2e; color: #60a5fa; }
+
+/* ─── Layout ─── */
+.container { max-width: 1120px; margin: 0 auto; padding: 18px 14px 80px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ─── Cards grid ─── */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 13px; }
+.card { background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius); overflow: hidden; transition: border-color 0.18s, box-shadow 0.18s; }
+.card:hover { border-color: #4a5568; box-shadow: 0 4px 18px rgba(0,0,0,.35); }
+.card.emergency { border-left: 3px solid var(–emergency); }
+.card.urgency   { border-left: 3px solid var(–urgency); }
+.card.info      { border-left: 3px solid var(–accent); }
+.card.note      { border-left: 3px solid var(–safe); }
+.full-width { grid-column: 1 / -1; }
+
+.card-header { padding: 10px 13px 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(–border); cursor: pointer; user-select: none; }
+.card-title { font-family: var(–mono); font-size: 12.5px; font-weight: 600; line-height: 1.3; flex: 1; }
+.card.emergency .card-title { color: var(–emergency); }
+.card.urgency   .card-title { color: var(–urgency); }
+.card.info      .card-title { color: var(–accent); }
+.card.note      .card-title { color: var(–safe); }
+.level-pill { font-family: var(–mono); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; margin-top: 1px; }
+.pill-emergency { background: var(–emergency-dim); color: var(–emergency); border: 1px solid var(–emergency-border); }
+.pill-urgency   { background: var(–urgency-dim);   color: var(–urgency);   border: 1px solid var(–urgency-border); }
+.pill-info      { background: var(–accent-dim);    color: var(–accent);    border: 1px solid var(–accent-border); }
+.pill-note      { background: var(–safe-dim);      color: var(–safe);      border: 1px solid var(–safe-border); }
+.chevron { transition: transform 0.2s; color: var(–muted); margin-left: 4px; font-size: 12px; }
+.card-body { padding: 12px 13px; }
+.card-body.collapsed { display: none; }
+.card-header.open .chevron { transform: rotate(180deg); }
+
+.triggers-label { font-family: var(–mono); font-size: 10px; color: var(–muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.triggers { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 11px; }
+.trigger-tag { font-size: 11px; font-family: var(–mono); background: var(–surface2); border: 1px solid var(–border); color: var(–muted); padding: 2px 7px; border-radius: 3px; }
+
+.section-label { font-family: var(–mono); font-size: 10px; color: var(–muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 10px 0 5px; }
+.action-list { list-style: none; }
+.action-list li { font-size: 12.5px; color: var(–text); padding: 3px 0 3px 14px; position: relative; border-bottom: 1px solid rgba(48,54,61,.4); line-height: 1.45; }
+.action-list li:last-child { border-bottom: none; }
+.action-list li::before { content: ‘>’; position: absolute; left: 0; color: var(–muted); font-weight: 600; }
+
+.warn-box { background: var(–emergency-dim); border: 1px solid var(–emergency-border); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: #ff9999; margin-top: 10px; font-family: var(–mono); line-height: 1.4; }
+.note-box { background: var(–urgency-dim); border: 1px solid var(–urgency-border); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: #ffcc80; margin-top: 10px; font-family: var(–mono); line-height: 1.4; }
+.tip-box  { background: var(–accent-dim); border: 1px solid var(–accent-border); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: #90c8ff; margin-top: 10px; font-family: var(–mono); line-height: 1.4; }
+
+/* ─── Meds table ─── */
+.meds-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.meds-table th { font-family: var(–mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(–muted); padding: 6px 10px; text-align: left; border-bottom: 1px solid var(–border); }
+.meds-table td { padding: 7px 10px; border-bottom: 1px solid rgba(48,54,61,.5); vertical-align: top; line-height: 1.4; }
+.meds-table tr:last-child td { border-bottom: none; }
+.meds-table tr:hover td { background: rgba(255,255,255,.02); }
+.drug { font-family: var(–mono); color: var(–accent); font-weight: 600; }
+
+/* ─── Dot phrase block ─── */
+.dot-phrase-wrap { margin-top: 12px; position: relative; }
+.dot-phrase-label { font-family: var(–mono); font-size: 10px; color: var(–purple); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+.copy-btn { background: var(–purple-dim); border: 1px solid #4c3d7a; color: var(–purple); font-family: var(–mono); font-size: 10px; padding: 2px 8px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+.copy-btn:hover { background: #2a1f4a; }
+.copy-btn.copied { background: var(–safe-dim); border-color: var(–safe-border); color: var(–safe); }
+.dot-phrase-text { background: #0a0e15; border: 1px solid #2a2f3d; border-radius: 5px; padding: 10px 12px; font-family: var(–mono); font-size: 11px; line-height: 1.65; color: #c9d1d9; white-space: pre; overflow-x: auto; }
+
+/* ─── Contact action buttons ─── */
+.contact-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.contact-btn { position: relative; }
+.contact-btn > button { display: flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 5px; border: 1px solid; font-family: var(–mono); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-call { background: var(–safe-dim); border-color: var(–safe-border); color: var(–safe); }
+.btn-call:hover { background: #163a12; }
+.btn-text { background: var(–accent-dim); border-color: var(–accent-border); color: var(–accent); }
+.btn-text:hover { background: #112847; }
+.contact-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 200px; background: var(–surface2); border: 1px solid var(–border); border-radius: 5px; z-index: 300; box-shadow: 0 6px 20px rgba(0,0,0,.5); margin-top: 3px; }
+.contact-dropdown.open { display: block; }
+.contact-dropdown a { display: flex; align-items: center; gap: 8px; padding: 9px 13px; font-family: var(–mono); font-size: 12px; color: var(–text); text-decoration: none; transition: background 0.12s; border-bottom: 1px solid var(–border); }
+.contact-dropdown a:last-child { border-bottom: none; }
+.contact-dropdown a:hover { background: var(–surface3); }
+.contact-dropdown .fav-star { color: gold; font-size: 11px; }
+
+/* ─── Symptom selector ─── */
+.sym-header { margin-bottom: 18px; }
+.sym-header h2 { font-family: var(–mono); font-size: 14px; font-weight: 600; color: var(–text); margin-bottom: 4px; }
+.sym-header p { font-size: 12px; color: var(–muted); }
+
+.word-cloud { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.sym-chip { display: inline-flex; align-items: center; padding: 7px 13px; border-radius: 20px; border: 1.5px solid var(–border); background: var(–surface); font-family: var(–mono); font-size: 11.5px; color: var(–muted); cursor: pointer; transition: all 0.18s; user-select: none; }
+.sym-chip:hover { border-color: var(–purple); color: var(–purple); background: var(–purple-dim); }
+.sym-chip.selected { border-color: var(–purple); color: var(–text); background: var(–purple-dim); box-shadow: 0 0 0 1px var(–purple); }
+.sym-chip.emg-chip.selected { border-color: var(–emergency); background: var(–emergency-dim); color: #ffaaaa; box-shadow: 0 0 0 1px var(–emergency); }
+.sym-chip.urg-chip.selected { border-color: var(–urgency); background: var(–urgency-dim); color: #ffd080; box-shadow: 0 0 0 1px var(–urgency); }
+.sym-chip-sz-lg { font-size: 13px; padding: 9px 16px; }
+.sym-chip-sz-sm { font-size: 10.5px; padding: 5px 10px; }
+
+.sym-clear { background: transparent; border: 1px solid var(–border); color: var(–muted); font-family: var(–mono); font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer; margin-left: 8px; transition: all 0.15s; }
+.sym-clear:hover { border-color: var(–emergency); color: var(–emergency); }
+
+.dx-panel { margin-top: 6px; }
+.dx-result { background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius); padding: 14px 16px; margin-bottom: 12px; animation: slideIn 0.22s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.dx-result.dx-emg { border-left: 3px solid var(–emergency); }
+.dx-result.dx-urg { border-left: 3px solid var(–urgency); }
+.dx-result.dx-safe { border-left: 3px solid var(–safe); }
+.dx-top-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dx-name { font-family: var(–mono); font-size: 14px; font-weight: 600; flex: 1; }
+.dx-emg .dx-name { color: var(–emergency); }
+.dx-urg .dx-name { color: var(–urgency); }
+.dx-safe .dx-name { color: var(–safe); }
+.dx-match-score { font-family: var(–mono); font-size: 10px; color: var(–muted); background: var(–surface2); padding: 2px 7px; border-radius: 10px; }
+.dx-next { font-size: 13px; color: var(–text); margin-bottom: 6px; }
+.dx-next strong { font-family: var(–mono); font-size: 11px; color: var(–muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 3px; }
+.dx-symptoms-matched { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.dx-sym-tag { font-size: 10px; font-family: var(–mono); padding: 1px 6px; border-radius: 3px; background: var(–purple-dim); color: var(–purple); border: 1px solid #3d2d6a; }
+.no-match { text-align: center; padding: 40px 20px; color: var(–muted); font-family: var(–mono); font-size: 13px; }
+
+/* ─── Contacts ─── */
+.contacts-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.contacts-header h2 { font-family: var(–mono); font-size: 14px; font-weight: 600; }
+.btn-add { background: var(–accent-dim); border: 1px solid var(–accent-border); color: var(–accent); font-family: var(–mono); font-size: 11px; padding: 7px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+.btn-add:hover { background: #112847; }
+
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.contact-card { background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius); padding: 13px 14px; transition: border-color 0.18s; }
+.contact-card:hover { border-color: #4a5568; }
+.contact-card.fav { border-color: #5a4a00; background: #1a1600; }
+.contact-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.contact-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.av-omd { background: #2d1012; border: 1px solid #5c1a1c; }
+.av-od  { background: var(–accent-dim); border: 1px solid var(–accent-border); }
+.av-ed  { background: var(–urgency-dim); border: 1px solid var(–urgency-border); }
+.av-other { background: var(–surface2); border: 1px solid var(–border); }
+.contact-info { flex: 1; }
+.contact-name { font-family: var(–mono); font-size: 13px; font-weight: 600; color: var(–text); }
+.contact-role { font-family: var(–mono); font-size: 10px; color: var(–muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.contact-numbers { margin-bottom: 8px; }
+.contact-number-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-family: var(–mono); font-size: 11.5px; color: var(–muted); }
+.num-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; background: var(–surface2); padding: 1px 5px; border-radius: 2px; color: var(–muted); }
+.contact-actions-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.btn-contact-call, .btn-contact-text { padding: 5px 11px; border-radius: 4px; font-family: var(–mono); font-size: 11px; cursor: pointer; border: 1px solid; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.btn-contact-call { background: var(–safe-dim); border-color: var(–safe-border); color: var(–safe); }
+.btn-contact-text { background: var(–accent-dim); border-color: var(–accent-border); color: var(–accent); }
+.btn-contact-call:hover { background: #163a12; }
+.btn-contact-text:hover { background: #112847; }
+.btn-fav { background: transparent; border: none; cursor: pointer; font-size: 16px; padding: 2px; transition: transform 0.15s; }
+.btn-fav:hover { transform: scale(1.2); }
+.btn-edit, .btn-delete { background: transparent; border: none; cursor: pointer; color: var(–muted); font-family: var(–mono); font-size: 10px; padding: 3px 6px; border-radius: 3px; transition: all 0.15s; }
+.btn-edit:hover { color: var(–accent); background: var(–accent-dim); }
+.btn-delete:hover { color: var(–emergency); background: var(–emergency-dim); }
+
+/* ─── Modal ─── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.modal-overlay.open { display: flex; }
+.modal { background: var(–surface); border: 1px solid var(–border); border-radius: 10px; padding: 22px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+.modal h3 { font-family: var(–mono); font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(–accent); }
+.form-group { margin-bottom: 13px; }
+.form-group label { display: block; font-family: var(–mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(–muted); margin-bottom: 5px; }
+.form-group input, .form-group select { width: 100%; background: var(–surface2); border: 1px solid var(–border); color: var(–text); font-family: var(–mono); font-size: 13px; padding: 8px 11px; border-radius: 5px; outline: none; transition: border-color 0.18s; }
+.form-group input:focus, .form-group select:focus { border-color: var(–accent); }
+.form-group select option { background: var(–surface2); }
+.phone-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.phone-row { display: flex; gap: 6px; align-items: center; }
+.phone-row input { flex: 1; }
+.phone-row .ptype { width: 90px; flex-shrink: 0; }
+.btn-add-phone { background: transparent; border: 1px dashed var(–border); color: var(–muted); font-family: var(–mono); font-size: 11px; padding: 6px 12px; border-radius: 4px; cursor: pointer; width: 100%; transition: all 0.15s; }
+.btn-add-phone:hover { border-color: var(–accent); color: var(–accent); }
+.btn-remove-phone { background: transparent; border: none; cursor: pointer; color: var(–muted); font-size: 14px; padding: 0 4px; transition: color 0.15s; }
+.btn-remove-phone:hover { color: var(–emergency); }
+.modal-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+.btn-save { background: var(–accent-dim); border: 1px solid var(–accent-border); color: var(–accent); font-family: var(–mono); font-size: 12px; padding: 8px 18px; border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+.btn-save:hover { background: #112847; }
+.btn-cancel { background: transparent; border: 1px solid var(–border); color: var(–muted); font-family: var(–mono); font-size: 12px; padding: 8px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+.btn-cancel:hover { border-color: var(–emergency); color: var(–emergency); }
+
+/* ─── Empty state ─── */
+.empty-state { text-align: center; padding: 50px 20px; color: var(–muted); font-family: var(–mono); font-size: 13px; border: 1px dashed var(–border); border-radius: var(–radius); }
+.empty-state .es-icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ─── Search bar ─── */
+.search-wrap { margin-bottom: 16px; position: relative; }
+.search-wrap input { width: 100%; background: var(–surface); border: 1px solid var(–border); color: var(–text); font-family: var(–mono); font-size: 13px; padding: 9px 14px 9px 38px; border-radius: 5px; outline: none; transition: border-color 0.18s; }
+.search-wrap input:focus { border-color: var(–accent); }
+.search-wrap input::placeholder { color: var(–muted); }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(–muted); font-size: 14px; pointer-events: none; }
+
+/* ─── Footer ─── */
+footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(–surface); border-top: 1px solid var(–border); padding: 6px 18px; display: flex; align-items: center; justify-content: space-between; z-index: 150; }
+footer span { font-family: var(–mono); font-size: 10px; color: var(–muted); }
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+.cards-grid { grid-template-columns: 1fr; }
+.contacts-grid { grid-template-columns: 1fr; }
+.tabs { gap: 0; }
+.tab { padding: 8px 9px; font-size: 10px; }
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="eye-icon">👁</div>
+    <div>
+      <h1>OCULAR TRIAGE</h1>
+      <p>Clinical Decision Support · Family Medicine</p>
+    </div>
+  </div>
+  <span class="badge">FM · ED · Urgent Care</span>
+</header>
+
+<div class="tabs" role="tablist">
+  <button class="tab active" onclick="switchTab('triage', this)">SYMPTOM CHECK <span class="tb sym">Dx</span></button>
+  <button class="tab" onclick="switchTab('emergency', this)">EMERGENCY <span class="tb emg">STAT</span></button>
+  <button class="tab" onclick="switchTab('urgency', this)">URGENCY <span class="tb urg">URG</span></button>
+  <button class="tab" onclick="switchTab('meds', this)">MEDS <span class="tb med">Rx</span></button>
+  <button class="tab" onclick="switchTab('refer', this)">REFERRAL <span class="tb ref">OD/OMD</span></button>
+  <button class="tab" onclick="switchTab('contacts', this)">CONTACTS <span class="tb con">📞</span></button>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════════
+     SYMPTOM TRIAGE PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-triage" class="panel active">
+  <div class="sym-header">
+    <h2>Symptom-Based Triage</h2>
+    <p>Tap presenting symptoms → differential diagnosis with urgency and next steps.</p>
+  </div>
+  <div class="word-cloud" id="wordCloud"></div>
+  <div style="margin-bottom:16px;display:flex;align-items:center;">
+    <span id="selCount" style="font-family:var(--mono);font-size:11px;color:var(--muted);">0 symptoms selected</span>
+    <button class="sym-clear" onclick="clearSymptoms()">Clear all</button>
+  </div>
+  <div class="dx-panel" id="dxPanel"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     EMERGENCY PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-emergency" class="panel">
+  <div class="cards-grid">
+
+```
+<div class="card emergency searchable" data-keywords="crao central retinal artery occlusion sudden vision loss amaurosis">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">CRAO — Central Retinal Artery Occlusion</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">Sudden painless vision loss</span>
+      <span class="trigger-tag">APD</span>
+      <span class="trigger-tag">Amaurosis fugax</span>
+      <span class="trigger-tag">Cherry red spot</span>
+    </div>
+    <div class="warn-box">⚠ Stroke equivalent. Time-sensitive. Refer immediately to ED. Activate TIA/CVA pathway.</div>
+    <div class="section-label">Immediate Workup</div>
+    <ul class="action-list">
+      <li>CBC w/diff, PT/PTT, ESR, CRP (r/o GCA if >=55 yo)</li>
+      <li>Carotid Doppler, echo (cardiac embolic source)</li>
+      <li>MRI/MRA brain</li>
+      <li>Temporal artery biopsy within 1 week if GCA suspected</li>
+    </ul>
+    <div class="section-label">GCA Protocol (>=55 yo with jaw claudication / scalp tenderness)</div>
+    <ul class="action-list">
+      <li>Start steroids IMMEDIATELY — do not wait for biopsy</li>
+      <li>If vision loss: IV methylprednisolone 1g/day x3d → oral prednisone 1 mg/kg/day</li>
+      <li>If no vision loss: Prednisone 40–60 mg/day PO</li>
+    </ul>
+    <div class="contact-actions" id="ca-crao"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-crao')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-crao">OCULAR - CRAO
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Sudden painless vision loss [right/left] eye, onset [TIME] ago.
+Hx: [amaurosis fugax y/n] [jaw claudication y/n] [headache y/n]
+[scalp tenderness y/n] [diplopia y/n] [prior episodes y/n]
+PMHx: [HTN DM AF hyperlipidemia] Meds: [list]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X] cc/sc
+Pupils: OD [X] OS [X] RAPD: [y/n which eye]
+EOM: full / restricted [describe]
+IOP: OD [X] OS [X] mmHg
+Slit lamp: [AC quiet / cells flare] Cornea: [clear/edema]
+Fundus: [disc pallor / cherry red spot / vessel attenuation]
+Vitals: HR [X] BP [X/X] SpO2 [X]
+
+ASSESSMENT & PLAN:
+
+1. CRAO [R/L] eye
+
+> Stroke equivalent - TIA/CVA pathway activated
+> Differential: GCA, cardioembolic, carotid thrombus, vasculitis
+- Emergent ED transfer initiated
+- CBC w/diff, PT/PTT, ESR, CRP, FBS ordered
+- Carotid Doppler + echocardiogram ordered
+- MRI/MRA brain ordered
+  [if GCA suspected:]
+- IV methylprednisolone 1g IV started given high GCA suspicion
+- Temporal artery biopsy ordered (within 1 week)
+  Misc: Patient/family counseled re: stroke risk and urgency.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card emergency searchable" data-keywords="CN3 third nerve palsy down out ptosis aneurysm diplopia pupil">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Acquired CN III Palsy</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">"Down and out" eye</span>
+      <span class="trigger-tag">Ptosis</span>
+      <span class="trigger-tag">Pupil involved</span>
+      <span class="trigger-tag">Diplopia</span>
+    </div>
+    <div class="warn-box">⚠ Pupil-involving CN III palsy = PComm aneurysm until proven otherwise. Emergent MRA.</div>
+    <ul class="action-list">
+      <li>MRA brain (rule out posterior communicating aneurysm)</li>
+      <li>Pupil spared + DM/HTN = likely microvascular (still urgent neuro/OD)</li>
+      <li>Refer on-call OMD immediately</li>
+    </ul>
+    <div class="contact-actions" id="ca-cn3"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-cn3')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-cn3">OCULAR - CN III PALSY
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Diplopia / drooping eyelid [R/L], onset [TIME] ago.
+Hx: [pain behind eye y/n] [headache y/n] [HTN DM y/n]
+[prior episodes y/n] [trauma y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]
+Pupils: OD [Xmm] OS [Xmm] light reflex [intact/sluggish/absent]
+RAPD: [y/n] Anisocoria: [y/n] pupil involved: [y/n]
+EOM: [ptosis R/L] gaze: [down and out R/L] restriction: [describe]
+Corneal reflex: [intact/absent] Facial sensation: intact
+Vitals: BP [X/X] HR [X]
+
+ASSESSMENT & PLAN:
+
+1. Acquired CN III palsy [R/L], pupil [involved / spared]
+
+> Pupil-involved: r/o PComm aneurysm (EMERGENT)
+> Pupil-spared + DM/HTN: r/o microvascular ischemia
+> Also consider: cavernous sinus lesion, uncal herniation
+- Emergent MRA brain ordered
+- On-call OMD/neurology notified
+- Neurology referral placed
+  Misc: Driving counseled against pending eval.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card emergency searchable" data-keywords="endophthalmitis post op cataract surgery hypopyon pain vision loss">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Endophthalmitis</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">Post-op (cataract &lt;1 mo)</span>
+      <span class="trigger-tag">Hypopyon</span>
+      <span class="trigger-tag">Pain + vision loss</span>
+      <span class="trigger-tag">Eyelid edema</span>
+    </div>
+    <div class="warn-box">⚠ Can lose the eye in 24–48h. Do NOT patch. Refer immediately to surgeon's on-call team.</div>
+    <ul class="action-list">
+      <li>Broad-spectrum topical antibiotic q1h + Atropine 1% TID</li>
+      <li>Do NOT patch the eye</li>
+      <li>Contact performing surgeon's on-call team directly</li>
+    </ul>
+    <div class="contact-actions" id="ca-endo"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-endo')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-endo">OCULAR - ENDOPHTHALMITIS
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eye pain + decreased vision [R/L], [X] days post [procedure].
+Surgical Hx: [cataract / intravitreal injection / penetrating trauma]
+Surgeon: [NAME] Date of surgery: [DATE]
+Hx: [pain severity 1-10] [discharge y/n] [lid swelling y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X] (may be LP or NLP)
+Pupils: [reactive / sluggish] IOP: [X] mmHg
+Lids: [edema y/n] [erythema y/n]
+Conj: [injection degree] Cornea: [haze y/n]
+Anterior chamber: [hypopyon present/absent] [cells/flare grade]
+Vitrous: [haze / fundus view obscured]
+
+ASSESSMENT & PLAN:
+
+1. Endophthalmitis [R/L] - post-[procedure]
+
+> Bacterial endophthalmitis most likely
+> Fungal possible if delayed presentation (>1 week)
+- Topical moxifloxacin (Vigamox) 1 gtt q1h started
+- Atropine 1% TID started
+- Performing surgeon on-call team notified emergently
+- No eye patch applied
+- Transfer arranged to [facility]
+  Misc: Urgency of situation explained to patient and family.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card emergency searchable" data-keywords="acute angle closure glaucoma high IOP nausea vomiting headache halos mid dilated pupil">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Acute Angle-Closure Glaucoma</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">IOP &gt;40 mmHg</span>
+      <span class="trigger-tag">Nausea / vomiting</span>
+      <span class="trigger-tag">Headache</span>
+      <span class="trigger-tag">Halos around lights</span>
+      <span class="trigger-tag">Fixed mid-dilated pupil</span>
+    </div>
+    <div class="section-label">IOP-Lowering Protocol (initiate immediately)</div>
+    <ul class="action-list">
+      <li>Brimonidine 0.2% — 1 gtt</li>
+      <li>Dorzolamide-Timolol (Cosopt) — 1 gtt q15 min x2</li>
+      <li>Acetazolamide (Diamox) — 2 x 250 mg PO now</li>
+      <li>Refer on-call OMD immediately after initiation</li>
+    </ul>
+    <div class="note-box">Post-op cataract: if within 1 week → refer to surgeon's team, not ED.</div>
+    <div class="contact-actions" id="ca-aacg"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-aacg')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-aacg">OCULAR - ACUTE ANGLE-CLOSURE GLAUCOMA
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eye pain [R/L] + HA + nausea, onset [TIME]. Halos: [y/n].
+Hx: [prior attack y/n] [recent dilation y/n] [dim-light exposure y/n]
+Meds: [any anticholinergic / sympathomimetic / sulfa drugs]
+PMHx: [prior glaucoma dx y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X] (often reduced affected side)
+IOP: OD [X] OS [X] mmHg  (affected eye typically >40)
+Pupils: [mid-dilated, fixed, non-reactive affected eye]
+Cornea: [microcystic edema / hazy]
+Anterior chamber: [shallow / flat - Van Herick grade]
+Conj: [ciliary flush / diffuse injection]
+Vitals: BP [X/X] HR [X] Nausea/vomiting: [y/n]
+
+ASSESSMENT & PLAN:
+
+1. Acute angle-closure glaucoma [R/L]
+
+> IOP critically elevated, optic nerve at risk
+> Differential: secondary angle closure, uveitic glaucoma
+- Brimonidine 0.2% 1 gtt OD/OS administered
+- Dorzolamide-Timolol (Cosopt) 1 gtt q15 min x2 administered
+- Acetazolamide 500 mg PO given (2x 250 mg tabs)
+- On-call OMD notified, transfer arranged
+- Avoid narcotics (nausea worsens IOP spikes)
+- Supine positioning avoided (worsens angle closure)
+  Misc: Prophylactic LPI to fellow eye to be arranged by OMD.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card emergency searchable" data-keywords="globe rupture orbital fracture chemical burn penetrating foreign body seidel">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Globe Rupture / Chemical Burn / Orbital Fracture</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="warn-box">⚠ Chemical burn: IRRIGATE FIRST. Do not delay irrigation for H&P or vitals.</div>
+    <div class="section-label">Chemical Burn Protocol</div>
+    <ul class="action-list">
+      <li>Irrigate immediately (NS or tap water), continue until pH 7.0–7.4</li>
+      <li>Sweep fornices for residual particulate</li>
+      <li>Fluorescein staining (Seidel test) after irrigation</li>
+      <li>Refer OD/OMD urgently same day</li>
+    </ul>
+    <div class="section-label">Globe Rupture / Penetrating FB</div>
+    <ul class="action-list">
+      <li>Do NOT patch (pressure on globe); use eye shield only</li>
+      <li>Fluorescein + Seidel sign (streaming = positive)</li>
+      <li>Keflex 250–500 mg PO q6h x5-7d (laceration present)</li>
+      <li>Refer on-call OMD emergently</li>
+    </ul>
+    <div class="contact-actions" id="ca-globe"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-globe')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-globe">OCULAR - GLOBE RUPTURE / CHEMICAL BURN
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: [Chemical splash / penetrating injury / blunt trauma] to [R/L] eye, [TIME] ago.
+Agent (if chemical): [acid / alkali / unknown] Duration of exposure: [X] min
+Mechanism (if trauma): [describe projectile / implement]
+Hx: [pain 1-10] [vision change y/n] [FB sensation y/n]
+Tetanus status: [up to date y/n]
+
+OBJECTIVE:
+[If chemical - irrigation performed first, THEN exam]
+pH pre-irrigation: [X]  pH post-irrigation: [X] (goal 7.0-7.4)
+Volume irrigated: [X] mL over [X] min
+VA: OD [X/X] OS [X/X]  IOP: OD [X] OS [X]
+Lids: [laceration y/n] [edema y/n]
+Conj: [ischemia grade / injection] Cornea: [opacity/haze grade]
+Fluorescein: [staining pattern] Seidel sign: [pos/neg]
+AC: [deep / shallow / flat] Iris: [prolapse y/n]
+
+ASSESSMENT & PLAN:
+
+1. [Chemical burn / Globe rupture / Penetrating FB] [R/L] eye
+
+> [Alkali burns penetrate deeper; acid denatures = self-limiting]
+> [Chemical:]
+- Copious NS irrigation x[X] min performed, pH normalized to [X]
+- Topical antibiotic started (moxifloxacin 1 gtt q2h)
+- On-call OD/OMD notified, urgent transfer arranged
+  [Globe rupture:]
+- Rigid eye shield applied (no patch/pressure)
+- Cephalexin 500 mg PO q6h x5d started
+- NPO in case of surgical repair
+- On-call OMD notified, transfer to OR team arranged
+  Misc: Tetanus updated [y/n]. OSHA incident report filed [y/n].</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card emergency searchable" data-keywords="retinal detachment flashes floaters curtain veil shadow vitreous">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Retinal Detachment / Acute PVD</div>
+    <span class="level-pill pill-emergency">EMERGENCY</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">Flashes AND floaters</span>
+      <span class="trigger-tag">Curtain / veil / shadow</span>
+      <span class="trigger-tag">Shower of new floaters</span>
+      <span class="trigger-tag">Peripheral field loss</span>
+    </div>
+    <div class="warn-box">⚠ Curtain = detachment until proven otherwise. Macula-on is surgical urgency within hours.</div>
+    <ul class="action-list">
+      <li>Refer on-call OD for triage → OMD if confirmed</li>
+      <li>Position: shadow toward ceiling (detachment edge stays superior)</li>
+      <li>New floaters ONLY (no curtain/flashes): urgent 48–72h OD</li>
+    </ul>
+    <div class="contact-actions" id="ca-rd"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-rd')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-rd">OCULAR - RETINAL DETACHMENT / PVD
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: [Flashes / floaters / curtain / shadow] [R/L] eye, onset [TIME] ago.
+Hx: Flashes: [y/n] Floaters: [new/worsening] Curtain/veil: [y/n direction]
+Peripheral field: [which quadrant affected]
+RFs: [myopia y/n] [prior RD y/n] [trauma y/n] [prior surgery y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]
+Pupils: [RAPD: y/n which eye]
+Confrontation VF: [defect: y/n describe]
+EOM: full  IOP: OD [X] OS [X]
+Fundus (if visualized): [disc] [retinal elevation y/n location]
+[vitreous haze y/n] [pigment cells “tobacco dust” y/n]
+
+ASSESSMENT & PLAN:
+
+1. [Suspected retinal detachment / Acute PVD] [R/L]
+
+> Curtain/veil = detachment until proven otherwise
+> PVD with flashes = vitreous traction, higher RD risk
+> Macula-on RD = surgical urgency (hours)
+- On-call OD notified for urgent slit-lamp + dilated exam
+- Patient instructed to position [shadow toward ceiling]
+- NPO initiated in case of surgical repair
+- OMD referral placed if confirmed by OD
+  Misc: Return precautions given: any sudden increase in curtain = 911.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     URGENCY PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-urgency" class="panel">
+  <div class="cards-grid">
+
+```
+<div class="card urgency searchable" data-keywords="corneal ulcer abrasion contact lens fluorescein 3-2-1 rule">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Corneal Ulcer — 3-2-1 Rule</div>
+    <span class="level-pill pill-urgency">URGENT</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="section-label">Refer to OMD if any present</div>
+    <ul class="action-list">
+      <li>&gt;3 mm from visual axis</li>
+      <li>2 or more lesions</li>
+      <li>1 mm or closer to visual axis</li>
+    </ul>
+    <div class="section-label">FM Initial Management</div>
+    <ul class="action-list">
+      <li>Culture before starting antibiotics</li>
+      <li>4th-gen fluoroquinolone: Moxifloxacin or Ciprofloxacin</li>
+      <li>D/C steroids, contact lenses, cosmetics</li>
+      <li>No patch (traps bacteria)</li>
+    </ul>
+    <div class="contact-actions" id="ca-ulcer"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-ulcer')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-ulcer">OCULAR - CORNEAL ULCER
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eye pain / redness / discharge [R/L], onset [X] days ago.
+Hx: [CL wear y/n type/duration] [prior ulcer y/n]
+[topical steroid use y/n] [trauma y/n]
+[mucopurulent discharge y/n] [photophobia y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]  IOP: OD [X] OS [X]
+Lids: [normal / edema] Conj: [injection grade]
+Cornea: [opacity location / size in mm]
+Distance from visual axis: [X] mm (3-2-1 rule: refer if <=3mm axis)
+Fluorescein: [staining pattern, uptake y/n]
+AC: [cells/flare y/n] Hypopyon: [y/n]
+Discharge: [clear/mucopurulent]
+
+ASSESSMENT & PLAN:
+
+1. Bacterial corneal ulcer [R/L]  3-2-1 criteria met: [y/n]
+
+> Bacterial most likely (CL wear, acute onset)
+> Fungal if trauma with plant material or delayed presentation
+> Acanthamoeba if extended-wear CL or freshwater exposure
+- Corneal cultures obtained prior to antibiotics
+- Moxifloxacin (Vigamox) 1 gtt q2h while awake started
+- Contact lens wear discontinued (patient counseled)
+- Topical steroids discontinued
+  [If 3-2-1 criteria met:]
+- On-call OMD notified for urgent co-management
+  [If not met:]
+- OD follow-up arranged next day
+  Misc: No eye patch. Follow-up in 24h or sooner if worsening.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card urgency searchable" data-keywords="corneal abrasion foreign body pain tearing cycloplegic">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Corneal Abrasion</div>
+    <span class="level-pill pill-urgency">URGENT</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">FB sensation</span>
+      <span class="trigger-tag">Tearing / pain</span>
+      <span class="trigger-tag">Positive fluorescein</span>
+      <span class="trigger-tag">Trauma</span>
+    </div>
+    <ul class="action-list">
+      <li>No discharge: erythromycin ointment TID + cycloplegic drops</li>
+      <li>No patch (delays healing); no steroids</li>
+      <li>OD follow-up 24–48h</li>
+    </ul>
+    <div class="contact-actions" id="ca-abrasion"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-abrasion')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-abrasion">OCULAR - CORNEAL ABRASION
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eye pain [R/L], onset after [scratch / FB / trauma / CL].
+Hx: [FB removed y/n] [CL-related y/n] [photophobia y/n] [tearing y/n]
+Hx: Pain severity [1-10]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]
+Lids: [normal / edema] Conj: [injection grade]
+Cornea: Fluorescein uptake [y/n], pattern: [linear / central / peripheral]
+Size: approx [X] mm  Location: [central / paracentral / peripheral]
+Seidel sign: negative
+FB (upper lid everted): [present / absent]
+AC: quiet  IOP: [X] mmHg
+
+ASSESSMENT & PLAN:
+
+1. Corneal abrasion [R/L], [CL-related / traumatic]
+
+> Mechanical epithelial defect, no signs of infection at this time
+- Erythromycin ophthalmic ointment 0.5%, thin ribbon TID x3d
+- Cyclopentolate 1% 1 gtt (ciliary spasm relief)
+- No eye patch (delays re-epithelialization)
+- No topical steroids, no CL wear until healed
+- OD follow-up in 24-48h
+  Misc: Return if no improvement 48h / any worsening / discharge.</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card urgency searchable" data-keywords="preseptal orbital cellulitis periorbital eyelid swelling proptosis EOM restriction">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Preseptal vs Orbital Cellulitis</div>
+    <span class="level-pill pill-urgency">URGENT</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Orbital (ADMIT) — any of these</div>
+    <div class="triggers">
+      <span class="trigger-tag">Proptosis</span>
+      <span class="trigger-tag">EOM restriction / pain on gaze</span>
+      <span class="trigger-tag">APD</span>
+      <span class="trigger-tag">Vision change</span>
+      <span class="trigger-tag">Severe fever / HA</span>
+    </div>
+    <div class="section-label">Preseptal — Outpatient Tx</div>
+    <ul class="action-list">
+      <li>Amoxicillin-clavulanate 875/125 mg BID x7-10d</li>
+      <li>Alt: Cefuroxime 500 mg BID; Clindamycin if PCN allergy</li>
+      <li>Follow-up 24–48h</li>
+    </ul>
+    <div class="section-label">Orbital Cellulitis — ADMIT</div>
+    <ul class="action-list">
+      <li>CT orbits w/ and w/o contrast (r/o subperiosteal abscess)</li>
+      <li>IV antibiotics, on-call OMD emergently</li>
+    </ul>
+    <div class="contact-actions" id="ca-cellulitis"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-cellulitis')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-cellulitis">OCULAR - PERIORBITAL / ORBITAL CELLULITIS
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eyelid swelling / redness [R/L], onset [X] days ago.
+Hx: [fever y/n] [sinusitis/URI y/n] [dental Hx y/n] [trauma y/n]
+[diplopia y/n] [pain on eye movement y/n] [vision change y/n]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]
+Pupils: [equal / APD present]
+EOM: [full / restricted - describe] Pain on gaze: [y/n]
+Proptosis: [y/n estimate in mm if possible]
+Lids: [erythema extent] [edema - preseptal vs post-septal location]
+Vision change: [y/n]  IOP: [X] mmHg
+Temp: [X]  BP: [X/X]  HR: [X]
+Classification: [PRESEPTAL / ORBITAL]
+
+ASSESSMENT & PLAN:
+
+1. [Preseptal / Orbital] cellulitis [R/L]
+   [If preseptal:]
+
+> Infection anterior to orbital septum, no orbital involvement
+- Amoxicillin-clavulanate 875/125 mg BID x10d
+- OD/ophthalmology follow-up 24-48h
+- Return if worsening, fever, proptosis, diplopia
+  [If orbital:]
+
+> Infection posterior to orbital septum - ADMIT required
+> Cavernous sinus thrombosis / intracranial spread possible
+- CT orbits w/ and w/o contrast ordered
+- IV antibiotics initiated
+- On-call OMD notified emergently
+- Admit for IV abx and surgical consult if abscess found
+  Misc: Driving counseled against [if orbital].</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+
+<div class="card urgency searchable" data-keywords="anterior uveitis iritis photophobia cells flare HLA-B27 sarcoid syphilis">
+  <div class="card-header open" onclick="toggleCard(this)">
+    <div class="card-title">Anterior Uveitis (Iritis)</div>
+    <span class="level-pill pill-urgency">URGENT</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="card-body">
+    <div class="triggers-label">Triggers</div>
+    <div class="triggers">
+      <span class="trigger-tag">Photophobia</span>
+      <span class="trigger-tag">Ciliary flush (limbal injection)</span>
+      <span class="trigger-tag">AC cells + flare</span>
+      <span class="trigger-tag">Dull ache</span>
+    </div>
+    <div class="section-label">Workup (50% idiopathic — test by suspicion)</div>
+    <ul class="action-list">
+      <li>HLA-B27, ANA, CBC, ESR, CRP</li>
+      <li>RPR / FTA-ABS (syphilis), Lyme, ACE (sarcoid)</li>
+      <li>Chest XR if sarcoid suspected</li>
+    </ul>
+    <div class="section-label">FM Initial Tx</div>
+    <ul class="action-list">
+      <li>Prednisolone acetate 1% q2h (taper per OD)</li>
+      <li>Cyclopentolate 1% BID-TID (prevents synechiae)</li>
+      <li>OD follow-up 24–72h</li>
+    </ul>
+    <div class="contact-actions" id="ca-uveitis"></div>
+    <div class="dot-phrase-wrap">
+      <div class="dot-phrase-label">Dot Phrase <button class="copy-btn" onclick="copyDot(this,'dp-uveitis')">Copy</button></div>
+      <div class="dot-phrase-text" id="dp-uveitis">OCULAR - ANTERIOR UVEITIS (IRITIS)
+```
+
+Date: [DATE]  Provider: [PROVIDER]
+
+SUBJECTIVE:
+CC: Eye pain / redness / photophobia [R/L], onset [X] days ago.
+Hx: [prior episodes y/n] [back pain y/n] [skin rash y/n]
+[IBD / Crohn’s / UC y/n] [STI risk y/n] [sarcoid Hx y/n]
+[joint pain y/n - which joints]
+
+OBJECTIVE:
+VA: OD [X/X] OS [X/X]
+Pupils: [sluggish / irregular / posterior synechiae y/n]
+RAPD: [y/n]
+Conj: [ciliary flush (limbal injection) / diffuse injection]
+Cornea: [KP present y/n - fine / mutton-fat] [Descemet’s folds]
+AC: cells [trace/1+/2+/3+/4+] flare [trace/1+/2+/3+/4+]
+Iris: [synechiae y/n] [heterochromia y/n]
+IOP: OD [X] OS [X]
+Vitrous: [anterior involvement y/n]
+
+ASSESSMENT & PLAN:
+
+1. Anterior uveitis [R/L], [first episode / recurrent]
+
+> Differential: HLA-B27-associated, sarcoid, syphilis, Lyme,
+> JIA, Behcet’s, idiopathic
+- Prednisolone acetate 1% 1 gtt q2h while awake started
+- Cyclopentolate 1% 1 gtt BID-TID started (synechiae prevention)
+- Labs ordered: HLA-B27, ANA, ESR, CRP, RPR [chest XR if sarcoid suspect]
+- OD follow-up within 24-72h for slit-lamp monitoring
+- Rheumatology referral placed if HLA-B27+ / systemic features
+  Misc: Avoid NSAIDs PO (may worsen some uveitis etiologies).</div>
+  
+   </div>
+   
+    </div>
+
+```
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MEDS PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-meds" class="panel">
+  <div class="cards-grid">
+    <div class="card info full-width">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <div class="card-title">Ophthalmic Medication Quick Reference</div>
+        <span class="level-pill pill-info">Rx Ref</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="card-body">
+        <div class="section-label">Antibiotics — Topical</div>
+        <table class="meds-table">
+          <tr><th>Drug</th><th>Dose</th><th>Indication</th></tr>
+          <tr><td class="drug">Moxifloxacin (Vigamox)</td><td>q2h awake (ulcer) / TID (abrasion)</td><td>Corneal ulcer, conjunctivitis</td></tr>
+          <tr><td class="drug">Ciprofloxacin 0.3%</td><td>q2h (ulcer) / q6h</td><td>Corneal ulcer, broad gram-neg</td></tr>
+          <tr><td class="drug">Erythromycin ointment</td><td>Ribbon TID–QID</td><td>Corneal abrasion, bacterial conjunctivitis</td></tr>
+          <tr><td class="drug">Polytrim (TMP-Polymyxin B)</td><td>1 gtt q3–6h</td><td>Bacterial conjunctivitis (budget)</td></tr>
+        </table>
+        <div class="section-label" style="margin-top:14px">Antibiotics — Systemic</div>
+        <table class="meds-table">
+          <tr><th>Drug</th><th>Dose</th><th>Indication</th></tr>
+          <tr><td class="drug">Amoxicillin-clavulanate</td><td>875/125 mg PO BID x7-10d</td><td>Preseptal cellulitis (1st line)</td></tr>
+          <tr><td class="drug">Cefuroxime</td><td>500 mg PO BID x7d</td><td>Preseptal cellulitis alt.</td></tr>
+          <tr><td class="drug">Cephalexin (Keflex)</td><td>250–500 mg PO q6h x5-7d</td><td>Corneal laceration prophylaxis</td></tr>
+          <tr><td class="drug">Clindamycin</td><td>300 mg PO TID</td><td>PCN allergy — preseptal</td></tr>
+        </table>
+        <div class="section-label" style="margin-top:14px">Corticosteroids — Topical</div>
+        <table class="meds-table">
+          <tr><th>Drug</th><th>Dose</th><th>Notes</th></tr>
+          <tr><td class="drug">Prednisolone acetate 1%</td><td>q1-2h (acute), taper</td><td>Anterior uveitis</td></tr>
+          <tr><td class="drug">Difluprednate (Durezol) 0.05%</td><td>QID, taper</td><td>Uveitis — more potent</td></tr>
+          <tr><td class="drug">Loteprednol 0.5%</td><td>QID</td><td>Lower IOP-raising risk</td></tr>
+        </table>
+        <div class="warn-box">⚠ NEVER start topical steroids on undiagnosed red eye — risk of herpetic flare, fungal amplification, corneal melt.</div>
+        <div class="section-label" style="margin-top:14px">Cycloplegics</div>
+        <table class="meds-table">
+          <tr><th>Drug</th><th>Duration</th><th>Use</th></tr>
+          <tr><td class="drug">Cyclopentolate 1%</td><td>12–24h</td><td>Abrasion pain, uveitis (short)</td></tr>
+          <tr><td class="drug">Homatropine 5%</td><td>1–3 days</td><td>Uveitis (moderate)</td></tr>
+          <tr><td class="drug">Scopolamine 0.25%</td><td>3–7 days</td><td>Severe uveitis</td></tr>
+        </table>
+        <div class="section-label" style="margin-top:14px">IOP-Lowering (Acute Angle Closure)</div>
+        <table class="meds-table">
+          <tr><th>Drug</th><th>Dose</th><th>Notes</th></tr>
+          <tr><td class="drug">Acetazolamide (Diamox)</td><td>2 x 250 mg PO now</td><td>CAI — first-line acute</td></tr>
+          <tr><td class="drug">Dorzolamide-Timolol (Cosopt)</td><td>1 gtt q15 min x2</td><td>Avoid in asthma/COPD</td></tr>
+          <tr><td class="drug">Brimonidine 0.2%</td><td>1 gtt q8h</td><td>Alpha-2 agonist; avoid in infants</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card note">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <div class="card-title">GCA Systemic Steroid Dosing</div>
+        <span class="level-pill pill-note">GCA Protocol</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="card-body">
+        <ul class="action-list">
+          <li>Vision loss present: IV methylprednisolone 1g/day x3d → prednisone 1 mg/kg/day</li>
+          <li>No vision loss: Prednisone 40–60 mg/day PO</li>
+          <li>Do NOT wait for biopsy</li>
+          <li>Biopsy within 1 week (steroids won't negate ~2 weeks)</li>
+          <li>Slow taper over months; monitor ESR/CRP</li>
+        </ul>
+        <div class="tip-box">Start PPI + Calcium/VitD + bone density planning at initiation for long-course treatment.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     REFERRAL PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-refer" class="panel">
+  <div class="cards-grid">
+    <div class="card info">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <div class="card-title">When to Refer: OD vs OMD vs ED</div>
+        <span class="level-pill pill-info">Referral Guide</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="card-body">
+        <div class="section-label">On-Call OD — Same Day Urgent</div>
+        <ul class="action-list">
+          <li>Corneal ulcer (not meeting 3-2-1)</li>
+          <li>Corneal abrasion (follow-up 24-48h)</li>
+          <li>Anterior uveitis (24-72h)</li>
+          <li>New flashes + floaters (no curtain)</li>
+        </ul>
+        <div class="section-label">On-Call OMD — Emergent</div>
+        <ul class="action-list">
+          <li>Globe rupture / penetrating FB</li>
+          <li>Endophthalmitis</li>
+          <li>Acute angle closure (after IOP-lowering started)</li>
+          <li>Orbital cellulitis with fever</li>
+          <li>Retinal detachment confirmed</li>
+          <li>Corneal ulcer meeting 3-2-1</li>
+        </ul>
+        <div class="section-label">Emergency Department</div>
+        <ul class="action-list">
+          <li>CRAO — activate stroke pathway</li>
+          <li>CN III palsy pupil-involved — MRA brain</li>
+          <li>GCA with vision loss — IV steroids</li>
+          <li>Chemical burn (irrigate first, then ED or OD)</li>
+        </ul>
+        <div class="tip-box">When in doubt: call on-call OD first. They triage to OMD or ED faster than guessing.</div>
+      </div>
+    </div>
+    <div class="card info">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <div class="card-title">FM Ocular Exam Checklist</div>
+        <span class="level-pill pill-info">Exam</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="card-body">
+        <ul class="action-list">
+          <li><strong>Visual Acuity</strong> — Snellen each eye; corrected/uncorrected</li>
+          <li><strong>Pupils</strong> — Direct/consensual; swinging flashlight for RAPD</li>
+          <li><strong>EOMs</strong> — H-pattern; pain, limitation, diplopia</li>
+          <li><strong>Confrontation VF</strong> — Each eye separately</li>
+          <li><strong>IOP</strong> — Tonopen; normal 10–21 mmHg</li>
+          <li><strong>Anterior Segment</strong> — Penlight/slit lamp: lids, conj, cornea, AC</li>
+          <li><strong>Fluorescein</strong> — Cobalt blue; uptake = epithelial defect</li>
+          <li><strong>Fundus</strong> — Dilated/direct: disc, macula, vessels</li>
+        </ul>
+        <div class="tip-box">RAPD = CN II compromise or severe retinal disease on affected side. Always do swinging flashlight if vision complaint.</div>
+      </div>
+    </div>
+    <div class="card emergency">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <div class="card-title">Red Eye — Cannot-Miss Red Flags</div>
+        <span class="level-pill pill-emergency">Red Flags</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="card-body">
+        <div class="warn-box">Any of these → NOT simple conjunctivitis. Refer same day.</div>
+        <ul class="action-list" style="margin-top:10px">
+          <li>Vision loss or change</li>
+          <li>Moderate–severe pain (vs. mild gritty discomfort)</li>
+          <li>Photophobia</li>
+          <li>Proptosis</li>
+          <li>RAPD (afferent pupillary defect)</li>
+          <li>Anisocoria</li>
+          <li>Corneal opacity or fluorescein uptake</li>
+          <li>Hyphema or hypopyon</li>
+          <li>Mucopurulent discharge + CL use</li>
+          <li>Recent intraocular surgery</li>
+          <li>Penetrating trauma history</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     CONTACTS PANEL
+══════════════════════════════════════════ -->
+
+<div id="panel-contacts" class="panel">
+  <div class="contacts-header">
+    <div>
+      <h2 style="font-family:var(--mono);font-size:14px;font-weight:600;">Local Eye Care Contacts</h2>
+      <p style="font-size:12px;color:var(--muted);margin-top:3px;">Tap call/text to reach contacts directly. Star = priority in care plan.</p>
+    </div>
+    <button class="btn-add" onclick="openModal()">+ Add Contact</button>
+  </div>
+  <div class="contacts-grid" id="contactsGrid"></div>
+  <div id="contactsEmpty" class="empty-state" style="display:none;">
+    <div class="es-icon">📋</div>
+    <div>No contacts yet.</div>
+    <div style="margin-top:6px;font-size:11px;">Add your local OD, OMD, and ED contacts to enable one-tap calling and texting from triage cards.</div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- ─── Add/Edit Contact Modal ─── -->
+
+<div class="modal-overlay" id="contactModal">
+  <div class="modal">
+    <h3 id="modalTitle">Add Contact</h3>
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="cName" placeholder="Dr. Jane Smith">
+    </div>
+    <div class="form-group">
+      <label>Role / Specialty</label>
+      <select id="cRole">
+        <option value="OMD">OMD — Ophthalmologist</option>
+        <option value="OD">OD — Optometrist</option>
+        <option value="ED">ED — Emergency</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Practice / Hospital</label>
+      <input type="text" id="cPractice" placeholder="Tulsa Eye Specialists">
+    </div>
+    <div class="form-group">
+      <label>Phone Numbers</label>
+      <div class="phone-list" id="phoneList"></div>
+      <button class="btn-add-phone" onclick="addPhoneRow()">+ Add number</button>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="cFav" style="width:auto;"> Mark as favorite (appears first in care plan)
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>OMEG Ocular Triage · FM Clinical Decision Support</span>
+  <span>Not a substitute for clinical judgment</span>
+</footer>
+
+<script>
+// ════════════════════════════════════════
+// DATA: Symptoms + Diagnoses
+// ════════════════════════════════════════
+const SYMPTOMS = [
+  { id: 'sudden_vision_loss', label: 'Sudden vision loss', size: 'lg', urgency: 'emg' },
+  { id: 'amaurosis', label: 'Amaurosis fugax', size: 'lg', urgency: 'emg' },
+  { id: 'curtain', label: 'Curtain / veil', size: 'lg', urgency: 'emg' },
+  { id: 'flashes', label: 'Flashes', size: 'md', urgency: 'emg' },
+  { id: 'floaters', label: 'Floaters', size: 'md', urgency: 'urg' },
+  { id: 'down_out', label: '"Down and out" eye', size: 'md', urgency: 'emg' },
+  { id: 'ptosis', label: 'Ptosis', size: 'sm', urgency: 'emg' },
+  { id: 'pupil_asymmetry', label: 'Anisocoria', size: 'sm', urgency: 'emg' },
+  { id: 'diplopia', label: 'Diplopia', size: 'md', urgency: 'emg' },
+  { id: 'apd', label: 'APD (RAPD)', size: 'md', urgency: 'emg' },
+  { id: 'eye_pain', label: 'Eye pain', size: 'lg', urgency: 'urg' },
+  { id: 'severe_pain', label: 'Severe eye pain', size: 'lg', urgency: 'emg' },
+  { id: 'photophobia', label: 'Photophobia', size: 'md', urgency: 'urg' },
+  { id: 'halos', label: 'Halos around lights', size: 'md', urgency: 'emg' },
+  { id: 'nausea', label: 'Nausea / vomiting', size: 'sm', urgency: 'urg' },
+  { id: 'headache', label: 'Headache', size: 'sm', urgency: 'urg' },
+  { id: 'redness', label: 'Red eye', size: 'lg', urgency: null },
+  { id: 'discharge', label: 'Discharge', size: 'md', urgency: null },
+  { id: 'fb_sensation', label: 'FB sensation', size: 'md', urgency: null },
+  { id: 'tearing', label: 'Tearing / epiphora', size: 'sm', urgency: null },
+  { id: 'contact_lens', label: 'Contact lens wearer', size: 'sm', urgency: null },
+  { id: 'lid_swelling', label: 'Eyelid swelling', size: 'md', urgency: 'urg' },
+  { id: 'proptosis', label: 'Proptosis / bulging', size: 'md', urgency: 'emg' },
+  { id: 'fever', label: 'Fever', size: 'sm', urgency: 'urg' },
+  { id: 'post_op', label: 'Recent eye surgery', size: 'md', urgency: 'emg' },
+  { id: 'trauma', label: 'Trauma / injury', size: 'md', urgency: 'emg' },
+  { id: 'chemical', label: 'Chemical exposure', size: 'md', urgency: 'emg' },
+  { id: 'jaw_claudi', label: 'Jaw claudication', size: 'sm', urgency: 'emg' },
+  { id: 'scalp_tend', label: 'Scalp tenderness', size: 'sm', urgency: 'emg' },
+  { id: 'elderly', label: 'Age >= 55', size: 'sm', urgency: null },
+  { id: 'back_pain', label: 'Back / joint pain', size: 'sm', urgency: null },
+  { id: 'ci_flush', label: 'Ciliary (limbal) flush', size: 'sm', urgency: 'urg' },
+  { id: 'hypopyon', label: 'Hypopyon', size: 'md', urgency: 'emg' },
+  { id: 'high_iop', label: 'High IOP', size: 'md', urgency: 'emg' },
+  { id: 'eom_restrict', label: 'EOM restriction', size: 'sm', urgency: 'emg' },
+  { id: 'corneal_stain', label: 'Corneal staining', size: 'sm', urgency: 'urg' },
+];
+
+const DX_DB = [
+  {
+    name: 'CRAO — Central Retinal Artery Occlusion',
+    urgency: 'emg',
+    syms: ['sudden_vision_loss', 'amaurosis', 'apd', 'elderly', 'jaw_claudi', 'scalp_tend'],
+    minMatch: 2,
+    next: 'EMERGENT: Stroke pathway. Refer to ED immediately. Order CBC/ESR/CRP/CRP, carotid Doppler, echo, MRI/MRA brain. If GCA suspected (>=55, jaw claudication, scalp tenderness): start IV methylprednisolone NOW.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Retinal Detachment',
+    urgency: 'emg',
+    syms: ['curtain', 'flashes', 'floaters', 'sudden_vision_loss', 'apd'],
+    minMatch: 2,
+    next: 'EMERGENT: Call on-call OD now. Curtain/veil = detachment until proven otherwise. Position patient: shadow toward ceiling. NPO if surgical repair likely.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Acute PVD (with traction risk)',
+    urgency: 'urg',
+    syms: ['flashes', 'floaters'],
+    minMatch: 2,
+    next: 'URGENT: OD same day or within 48-72h. Dilated exam required. No curtain/veil = lower risk, but traction-induced tears possible. Return precautions.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Acute Angle-Closure Glaucoma',
+    urgency: 'emg',
+    syms: ['severe_pain', 'halos', 'nausea', 'headache', 'high_iop', 'redness'],
+    minMatch: 3,
+    next: 'EMERGENT: Start IOP protocol NOW — Brimonidine + Dorzolamide-Timolol + Diamox 500 mg PO. Then call on-call OMD. Do NOT give opioids.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Acquired CN III Palsy',
+    urgency: 'emg',
+    syms: ['diplopia', 'ptosis', 'down_out', 'pupil_asymmetry'],
+    minMatch: 2,
+    next: 'EMERGENT: Pupil-involved = PComm aneurysm. Order MRA brain stat. Refer on-call OMD/neurology immediately. Counsel: no driving.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Endophthalmitis',
+    urgency: 'emg',
+    syms: ['post_op', 'severe_pain', 'sudden_vision_loss', 'hypopyon', 'lid_swelling'],
+    minMatch: 2,
+    next: 'EMERGENT: Start Vigamox q1h + Atropine 1% TID. Do NOT patch. Contact performing surgeon on-call team immediately. May need intravitreal antibiotics.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Globe Rupture / Penetrating Injury',
+    urgency: 'emg',
+    syms: ['trauma', 'severe_pain', 'sudden_vision_loss', 'apd'],
+    minMatch: 2,
+    next: 'EMERGENT: Eye shield only (NO patch). Seidel test. Keflex 500 mg PO q6h. NPO. Call on-call OMD. Do NOT apply pressure to eye.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Chemical Burn',
+    urgency: 'emg',
+    syms: ['chemical', 'severe_pain', 'redness', 'tearing'],
+    minMatch: 1, // chemical alone = act
+    next: 'EMERGENT: IRRIGATE NOW before H&P. NS or tap water until pH 7.0-7.4. Sweep fornices. Seidel test after. Refer OD/OMD same day.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Giant Cell Arteritis (GCA)',
+    urgency: 'emg',
+    syms: ['jaw_claudi', 'scalp_tend', 'sudden_vision_loss', 'elderly', 'headache'],
+    minMatch: 2,
+    next: 'EMERGENT: Do NOT wait for biopsy. Start prednisone 40-60 mg/day (or IV methylprednisolone if vision loss). Order ESR, CRP, CBC. Biopsy within 1 week.',
+    panel: 'emergency',
+  },
+  {
+    name: 'Corneal Ulcer',
+    urgency: 'urg',
+    syms: ['eye_pain', 'redness', 'discharge', 'contact_lens', 'photophobia', 'corneal_stain'],
+    minMatch: 3,
+    next: 'URGENT: Culture first. Start Moxifloxacin q2h. D/C CL. Apply 3-2-1 rule — if met, call OMD. OD follow-up next day. No patch.',
+    panel: 'urgency',
+  },
+  {
+    name: 'Corneal Abrasion',
+    urgency: 'urg',
+    syms: ['fb_sensation', 'tearing', 'eye_pain', 'corneal_stain', 'trauma'],
+    minMatch: 2,
+    next: 'URGENT: Erythromycin ointment TID + cyclopentolate 1 gtt. No patch. OD follow-up 24-48h.',
+    panel: 'urgency',
+  },
+  {
+    name: 'Anterior Uveitis (Iritis)',
+    urgency: 'urg',
+    syms: ['photophobia', 'ci_flush', 'eye_pain', 'redness', 'back_pain'],
+    minMatch: 2,
+    next: 'URGENT: Start prednisolone acetate 1% q2h + cyclopentolate BID. Order HLA-B27, ANA, ESR, RPR. OD slit-lamp follow-up 24-72h.',
+    panel: 'urgency',
+  },
+  {
+    name: 'Orbital Cellulitis',
+    urgency: 'emg',
+    syms: ['lid_swelling', 'proptosis', 'eom_restrict', 'fever', 'eye_pain'],
+    minMatch: 2,
+    next: 'EMERGENT: CT orbits w/ and w/o contrast. IV antibiotics. Admit. Call on-call OMD. Rule out subperiosteal abscess + cavernous sinus extension.',
+    panel: 'urgency',
+  },
+  {
+    name: 'Preseptal Cellulitis',
+    urgency: 'urg',
+    syms: ['lid_swelling', 'fever', 'redness'],
+    minMatch: 2,
+    next: 'URGENT: Amoxicillin-clavulanate 875/125 mg BID x10d. OD/ophthalmology follow-up 24-48h. Return if proptosis, diplopia, or worsening.',
+    panel: 'urgency',
+  },
+];
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let selectedSymptoms = new Set();
+let contacts = JSON.parse(localStorage.getItem('ocular_contacts') || '[]');
+let editingId = null;
+let phoneRowCount = 0;
+
+// ════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'contacts') renderContacts();
+}
+
+// ════════════════════════════════════════
+// CARD TOGGLING
+// ════════════════════════════════════════
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('collapsed');
+  header.classList.toggle('open');
+  if (!header.classList.contains('open')) header.classList.remove('open');
+  else header.classList.add('open');
+}
+
+// ════════════════════════════════════════
+// DOT PHRASE COPY
+// ════════════════════════════════════════
+function copyDot(btn, id) {
+  const text = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ════════════════════════════════════════
+// SYMPTOM TRIAGE
+// ════════════════════════════════════════
+function initWordCloud() {
+  const cloud = document.getElementById('wordCloud');
+  cloud.innerHTML = '';
+  SYMPTOMS.forEach(s => {
+    const chip = document.createElement('span');
+    chip.className = 'sym-chip' + (s.size === 'lg' ? ' sym-chip-sz-lg' : s.size === 'sm' ? ' sym-chip-sz-sm' : '');
+    chip.textContent = s.label;
+    chip.dataset.id = s.id;
+    chip.dataset.urgency = s.urgency || '';
+    chip.onclick = () => toggleSymptom(s, chip);
+    cloud.appendChild(chip);
+  });
+}
+
+function toggleSymptom(s, chip) {
+  if (selectedSymptoms.has(s.id)) {
+    selectedSymptoms.delete(s.id);
+    chip.classList.remove('selected', 'emg-chip', 'urg-chip');
+  } else {
+    selectedSymptoms.add(s.id);
+    chip.classList.add('selected');
+    if (s.urgency === 'emg') chip.classList.add('emg-chip');
+    else if (s.urgency === 'urg') chip.classList.add('urg-chip');
+  }
+  updateSelCount();
+  runDx();
+}
+
+function clearSymptoms() {
+  selectedSymptoms.clear();
+  document.querySelectorAll('.sym-chip').forEach(c => c.classList.remove('selected', 'emg-chip', 'urg-chip'));
+  updateSelCount();
+  runDx();
+}
+
+function updateSelCount() {
+  const n = selectedSymptoms.size;
+  document.getElementById('selCount').textContent = n === 0 ? '0 symptoms selected' : `${n} symptom${n > 1 ? 's' : ''} selected`;
+}
+
+function runDx() {
+  const panel = document.getElementById('dxPanel');
+  if (selectedSymptoms.size === 0) { panel.innerHTML = ''; return; }
+
+  const sel = Array.from(selectedSymptoms);
+  const results = DX_DB.map(dx => {
+    const matches = dx.syms.filter(s => sel.includes(s));
+    return { ...dx, matchCount: matches.length, matchedSyms: matches };
+  }).filter(r => r.matchCount >= r.minMatch)
+    .sort((a, b) => {
+      const urgScore = u => u === 'emg' ? 2 : u === 'urg' ? 1 : 0;
+      const ratioDiff = (b.matchCount / b.syms.length) - (a.matchCount / a.syms.length);
+      if (Math.abs(ratioDiff) > 0.15) return ratioDiff > 0 ? 1 : -1;
+      return urgScore(b.urgency) - urgScore(a.urgency);
+    });
+
+  if (results.length === 0) {
+    panel.innerHTML = `<div class="no-match">No strong match for selected symptoms.<br>Consider adding more specific symptoms or reviewing the Emergency / Urgency tabs.</div>`;
+    return;
+  }
+
+  panel.innerHTML = results.map(r => {
+    const cls = r.urgency === 'emg' ? 'dx-emg' : r.urgency === 'urg' ? 'dx-urg' : 'dx-safe';
+    const pill = r.urgency === 'emg' ? 'pill-emergency' : r.urgency === 'urg' ? 'pill-urgency' : 'pill-note';
+    const pillText = r.urgency === 'emg' ? 'EMERGENCY' : r.urgency === 'urg' ? 'URGENT' : 'ROUTINE';
+    const pct = Math.round((r.matchCount / r.syms.length) * 100);
+    const matchedLabels = r.matchedSyms.map(id => {
+      const s = SYMPTOMS.find(x => x.id === id);
+      return s ? `<span class="dx-sym-tag">${s.label}</span>` : '';
+    }).join('');
+    const contactBtns = getContactButtonsHtml(r.urgency);
+    return `
+      <div class="dx-result ${cls}">
+        <div class="dx-top-row">
+          <div class="dx-name">${r.name}</div>
+          <span class="level-pill ${pill}">${pillText}</span>
+          <span class="dx-match-score">${r.matchCount}/${r.syms.length} (${pct}%)</span>
+        </div>
+        <div class="dx-next"><strong>Next Steps</strong>${r.next}</div>
+        <div class="dx-symptoms-matched">${matchedLabels}</div>
+        ${contactBtns ? `<div class="contact-actions" style="margin-top:10px;">${contactBtns}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+// CONTACTS
+// ════════════════════════════════════════
+function saveContacts() {
+  localStorage.setItem('ocular_contacts', JSON.stringify(contacts));
+}
+
+function getAvatar(role) {
+  const map = { OMD: { cls: 'av-omd', icon: '🩺' }, OD: { cls: 'av-od', icon: '👁' }, ED: { cls: 'av-ed', icon: '🚨' }, OTHER: { cls: 'av-other', icon: '📞' } };
+  return map[role] || map.OTHER;
+}
+
+function renderContacts() {
+  const grid = document.getElementById('contactsGrid');
+  const empty = document.getElementById('contactsEmpty');
+  const sorted = [...contacts].sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
+  if (sorted.length === 0) { grid.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = sorted.map(c => {
+    const av = getAvatar(c.role);
+    const nums = (c.phones || []).map(p =>
+      `<div class="contact-number-row"><span class="num-label">${p.type}</span>${p.number}</div>`
+    ).join('');
+    const primaryPhone = (c.phones || [])[0];
+    const callBtns = buildCallTextBtns(c, 'call');
+    const textBtns = buildCallTextBtns(c, 'text');
+    return `
+      <div class="contact-card ${c.fav ? 'fav' : ''}" id="ccard-${c.id}">
+        <div class="contact-top">
+          <div class="contact-avatar ${av.cls}">${av.icon}</div>
+          <div class="contact-info">
+            <div class="contact-name">${c.fav ? '⭐ ' : ''}${c.name}</div>
+            <div class="contact-role">${c.role} ${c.practice ? '· ' + c.practice : ''}</div>
+          </div>
+          <button class="btn-fav" onclick="toggleFav('${c.id}')" title="Toggle favorite">${c.fav ? '⭐' : '☆'}</button>
+        </div>
+        <div class="contact-numbers">${nums}</div>
+        <div class="contact-actions-row">
+          ${callBtns}
+          ${textBtns}
+          <button class="btn-edit" onclick="openModal('${c.id}')">Edit</button>
+          <button class="btn-delete" onclick="deleteContact('${c.id}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
+  // Inject contact buttons into triage cards
+  injectContactButtons();
+}
+
+function buildCallTextBtns(c, mode) {
+  const phones = (c.phones || []);
+  if (phones.length === 0) return '';
+  const icon = mode === 'call' ? '📞' : '💬';
+  const label = mode === 'call' ? 'Call' : 'Text';
+  const cls = mode === 'call' ? 'btn-contact-call' : 'btn-contact-text';
+  const scheme = mode === 'call' ? 'tel' : 'sms';
+  if (phones.length === 1) {
+    return `<a href="${scheme}:${phones[0].number.replace(/\D/g,'')}" class="${cls}">${icon} ${label}</a>`;
+  }
+  // Multiple numbers → inline dropdown
+  const uid = `drop-${c.id}-${mode}-${Math.random().toString(36).slice(2,6)}`;
+  const opts = phones.map(p => `<a href="${scheme}:${p.number.replace(/\D/g,'')}">${icon} ${p.type}: ${p.number}</a>`).join('');
+  return `
+    <div class="contact-btn">
+      <button class="${cls}" onclick="toggleDrop('${uid}')">${icon} ${label} ▾</button>
+      <div class="contact-dropdown" id="${uid}">${opts}</div>
+    </div>`;
+}
+
+function toggleDrop(id) {
+  const d = document.getElementById(id);
+  if (!d) return;
+  const isOpen = d.classList.contains('open');
+  document.querySelectorAll('.contact-dropdown.open').forEach(x => x.classList.remove('open'));
+  if (!isOpen) d.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.contact-btn')) {
+    document.querySelectorAll('.contact-dropdown.open').forEach(x => x.classList.remove('open'));
+  }
+});
+
+function toggleFav(id) {
+  const c = contacts.find(x => x.id === id);
+  if (c) { c.fav = !c.fav; saveContacts(); renderContacts(); }
+}
+
+function deleteContact(id) {
+  if (!confirm('Delete this contact?')) return;
+  contacts = contacts.filter(x => x.id !== id);
+  saveContacts();
+  renderContacts();
+}
+
+// ─── Contact buttons in triage cards ───
+function getContactButtonsHtml(urgency) {
+  // Find relevant contacts: favorites first, then by role relevance
+  const favs = contacts.filter(c => c.fav);
+  const omds = contacts.filter(c => c.role === 'OMD');
+  const ods = contacts.filter(c => c.role === 'OD');
+  const eds = contacts.filter(c => c.role === 'ED');
+  let relevant = [];
+  if (urgency === 'emg') relevant = [...new Set([...favs, ...omds, ...eds])].slice(0, 3);
+  else relevant = [...new Set([...favs, ...ods, ...omds])].slice(0, 3);
+  if (relevant.length === 0) return '';
+  return relevant.map(c => {
+    const phones = c.phones || [];
+    if (phones.length === 0) return '';
+    const uid = `inl-${c.id}-${Math.random().toString(36).slice(2,6)}`;
+    if (phones.length === 1) {
+      return `<a href="tel:${phones[0].number.replace(/\D/g,'')}" class="btn-contact-call" style="font-size:10px;padding:4px 9px;">📞 ${c.name}</a>
+              <a href="sms:${phones[0].number.replace(/\D/g,'')}" class="btn-contact-text" style="font-size:10px;padding:4px 9px;">💬 Text</a>`;
+    }
+    const opts = phones.map(p => `<a href="tel:${p.number.replace(/\D/g,'')}">${p.type}: ${p.number}</a>`).join('');
+    const smsOpts = phones.map(p => `<a href="sms:${p.number.replace(/\D/g,'')}">${p.type}: ${p.number}</a>`).join('');
+    return `
+      <div class="contact-btn">
+        <button class="btn-contact-call" style="font-size:10px;padding:4px 9px;" onclick="toggleDrop('${uid}-c')">📞 ${c.name} ▾</button>
+        <div class="contact-dropdown" id="${uid}-c">${opts}</div>
+      </div>
+      <div class="contact-btn">
+        <button class="btn-contact-text" style="font-size:10px;padding:4px 9px;" onclick="toggleDrop('${uid}-s')">💬 Text ▾</button>
+        <div class="contact-dropdown" id="${uid}-s">${smsOpts}</div>
+      </div>`;
+  }).filter(Boolean).join('');
+}
+
+function injectContactButtons() {
+  const mapping = {
+    'ca-crao': 'emg', 'ca-cn3': 'emg', 'ca-endo': 'emg',
+    'ca-aacg': 'emg', 'ca-globe': 'emg', 'ca-rd': 'emg',
+    'ca-ulcer': 'urg', 'ca-abrasion': 'urg', 'ca-cellulitis': 'urg',
+    'ca-uveitis': 'urg',
+  };
+  Object.entries(mapping).forEach(([id, urgency]) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = getContactButtonsHtml(urgency);
+  });
+}
+
+// ─── Modal ───
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'Edit Contact' : 'Add Contact';
+  document.getElementById('phoneList').innerHTML = '';
+  phoneRowCount = 0;
+  if (id) {
+    const c = contacts.find(x => x.id === id);
+    if (c) {
+      document.getElementById('cName').value = c.name;
+      document.getElementById('cRole').value = c.role;
+      document.getElementById('cPractice').value = c.practice || '';
+      document.getElementById('cFav').checked = c.fav || false;
+      (c.phones || []).forEach(p => addPhoneRow(p.number, p.type));
+    }
+  } else {
+    document.getElementById('cName').value = '';
+    document.getElementById('cRole').value = 'OMD';
+    document.getElementById('cPractice').value = '';
+    document.getElementById('cFav').checked = false;
+    addPhoneRow();
+  }
+  document.getElementById('contactModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('contactModal').classList.remove('open');
+  editingId = null;
+}
+
+function addPhoneRow(number='', type='Office') {
+  const row = document.createElement('div');
+  row.className = 'phone-row';
+  row.innerHTML = `
+    <select class="ptype" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 8px;border-radius:4px;outline:none;">
+      <option ${type==='Office'?'selected':''}>Office</option>
+      <option ${type==='Cell'?'selected':''}>Cell</option>
+      <option ${type==='Answering'?'selected':''}>Answering</option>
+      <option ${type==='Fax'?'selected':''}>Fax</option>
+      <option ${type==='Pager'?'selected':''}>Pager</option>
+    </select>
+    <input type="tel" placeholder="(918) 555-1234" value="${number}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;padding:7px 10px;border-radius:4px;outline:none;">
+    <button class="btn-remove-phone" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('phoneList').appendChild(row);
+}
+
+function saveContact() {
+  const name = document.getElementById('cName').value.trim();
+  if (!name) { alert('Name required'); return; }
+  const phones = Array.from(document.querySelectorAll('#phoneList .phone-row')).map(row => ({
+    type: row.querySelector('.ptype').value,
+    number: row.querySelector('input[type="tel"]').value.trim(),
+  })).filter(p => p.number);
+
+  if (editingId) {
+    const idx = contacts.findIndex(x => x.id === editingId);
+    if (idx !== -1) contacts[idx] = { ...contacts[idx], name, role: document.getElementById('cRole').value, practice: document.getElementById('cPractice').value.trim(), fav: document.getElementById('cFav').checked, phones };
+  } else {
+    contacts.push({ id: Date.now().toString(), name, role: document.getElementById('cRole').value, practice: document.getElementById('cPractice').value.trim(), fav: document.getElementById('cFav').checked, phones });
+  }
+  saveContacts();
+  closeModal();
+  renderContacts();
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+initWordCloud();
+renderContacts();
+</script>
+
+</body>
+</html>
